@@ -1,8 +1,10 @@
-use std::any::Any;
-
 use resvg::{
     tiny_skia,
     usvg::{self, Tree},
+    usvg_text_layout::{
+        fontdb::{self},
+        TreeTextToPath,
+    },
 };
 use worker::*;
 
@@ -63,11 +65,17 @@ fn get_query_param(req: &Request, param: &str) -> Option<String> {
 }
 
 async fn handle_image(title: String) -> Result<Response> {
-    let tree = Tree::from_str(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 600\" width=\"800\" height=\"600\"><circle cx=\"50\" cy=\"50\" r=\"50\" /></svg>",
-        &usvg::Options::default(),
+    let opt = usvg::Options::default();
+    let mut tree = Tree::from_str(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 600\" width=\"800\" height=\"600\"><text y=\"50\" fill=\"black\">hello</text></svg>",
+        &opt,
     )
     .expect("Parse svg");
+
+    let mut fontdb = fontdb::Database::new();
+    fontdb.load_font_data(include_bytes!("../assets/Inter-Bold.ttf").to_vec());
+    // fontdb.load_system_fonts();
+    tree.convert_text(&fontdb, opt.keep_named_groups);
 
     let pixmap_size = tree.size.to_screen_size();
     let mut pixmap = tiny_skia::Pixmap::new(pixmap_size.width(), pixmap_size.height()).unwrap();
